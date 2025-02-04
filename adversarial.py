@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 def generate_FGSM(model, x, y_true, epsilon=0.01):
     """
-    Gera um exemplo adversarial utilizando o método FGSM.
+    Gera um exemplo adversarial utilizando FGSM.
     
     x: tensor 1D (feature vector) com requires_grad=True
     y_true: tensor com o rótulo verdadeiro

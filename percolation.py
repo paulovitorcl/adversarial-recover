@@ -4,9 +4,14 @@ import numpy as np
 def percolation_features(img, max_L=43, step=4):
     """
     Extrai features de percolação (locais e globais) de uma imagem em escala de cinza.
-    Esta implementação é simplificada e serve apenas como exemplo.
-
-    Retorna um vetor de características (ex.: ~48 dimensões).
+    Esta implementação é uma simplificação para fins didáticos.
+    
+    - Para cada escala L (variando de 3 a max_L com incremento de 'step'),
+      percorre a imagem em blocos de tamanho LxL (aqui com salto L, para simplificar).
+    - Calcula “métricas” dummy: a média dos pixels cujo valor difere do centro por um threshold.
+    - Extrai, ao final, algumas features globais (ex.: média, desvio, máximo, mínimo, mediana).
+    
+    Retorna um vetor (exemplo: 3 * len(scales) + 5 features).
     """
     scales = list(range(3, max_L+1, step))
     C_values, Q_values, M_values = [], [], []
@@ -36,16 +41,17 @@ def percolation_features(img, max_L=43, step=4):
             Q_values.append(0)
             M_values.append(0)
     
-    # Exemplo de features globais (dummy)
+    # Features globais (exemplo dummy)
     global_feats = [np.mean(img), np.std(img), np.max(img), np.min(img), np.median(img)]
+    
     feats = np.concatenate([C_values, Q_values, M_values, global_feats], axis=0)
     return feats
 
 def extract_features_dataset(X, max_L=43, step=4):
     """
-    Aplica a função percolation_features a cada imagem do array X.
+    Aplica percolation_features a cada imagem de X.
     
-    Retorna um array (N, num_features).
+    Retorna um array de features de dimensão (N, num_features).
     """
     feature_list = []
     for img in X:

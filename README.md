@@ -39,6 +39,19 @@ Para desativar o ambiente virtual:
 deactivate
 ```
 
+### Estrutura do dataset
+```
+chest_xray/
+  train/
+    NORMAL/
+    PNEUMONIA/
+  test/
+    NORMAL/
+    PNEUMONIA/
+  (opcional: val/)
+```
+
+
 ### Funções
 
 `main.py` -> script principal que orquestra tudo (carrega dados, extrai características, treina, gera e avalia ataques, faz defesa, etc.).
