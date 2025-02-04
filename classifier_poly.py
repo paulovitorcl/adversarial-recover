@@ -25,12 +25,8 @@ class PolynomialClassifier:
         return self.model.predict_proba(X_poly)
     
     def evaluate(self, X, y):
-        """
-        Retorna acurácia e, se binário, AUC também.
-        """
         y_pred = self.predict(X)
         acc = accuracy_score(y, y_pred)
-        
         unique_classes = np.unique(y)
         if len(unique_classes) == 2:
             y_prob = self.predict_proba(X)[:,1]

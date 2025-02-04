@@ -4,9 +4,8 @@ from scipy.ndimage import median_filter
 
 def defend_median_filter(X_adv, kernel_size=3):
     """
-    Aplica filtragem mediana 1D em cada vetor de características 
-    (se já estiver em features).
-    Retorna novo array "limpo".
+    Aplica filtragem mediana (1D) em cada vetor de características.
+    Retorna o array de features “defendidas”.
     """
     X_def = []
     for i in range(len(X_adv)):

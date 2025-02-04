@@ -1,18 +1,31 @@
 # adversarial-recover
 
+## Realizando o download do dataset
+```
+pip install darwin-py
+darwin dataset pull v7-labs/covid-19-chest-x-ray-dataset:all-images
+```
 
 ## Execução
+### 1 - Criando e ativando o ambiente virtual
 ```
-pip install numpy opencv-python scikit-learn torch torchvision scipy
-python main.py
+python3 -m venv venv
+source venv/bin/activate
 ```
 
-## Organização do dataset
+### 2 - Instalando as dependências
 ```
-- datasets/
-   - Covid/
-   - Pneumonia/
-   - Healthy/
+pip install -r requirements.txt
+```
+
+### 3 - Baixando o dataset
+```
+darwin dataset pull v7-labs/covid-19-chest-x-ray-dataset:all-images
+```
+
+Ou apenas as de COVID-19:
+```
+darwin dataset pull v7-labs/covid-19-chest-x-ray-dataset:covid-only
 ```
 
 ### Funções
