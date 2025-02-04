@@ -28,6 +28,17 @@ Ou apenas as de COVID-19:
 darwin dataset pull v7-labs/covid-19-chest-x-ray-dataset:covid-only
 ```
 
+### 4 - Executando 
+Deve-se garantir que o dataset esteja no diretório indicado no script main.py
+```
+python main.py
+```
+
+Para desativar o ambiente virtual:
+```
+deactivate
+```
+
 ### Funções
 
 `main.py` -> script principal que orquestra tudo (carrega dados, extrai características, treina, gera e avalia ataques, faz defesa, etc.).
