@@ -5,7 +5,7 @@ import numpy as np
 
 def load_chest_xray_pneumonia_dataset(dataset_path, split="train", img_size=(256,256)):
     """
-    Carrega o dataset "Chest X-Ray Pneumonia" do Kaggle/Mendeley.
+    Carrega o dataset "Chest X-Ray Pneumonia".
 
     Estrutura esperada:
        dataset_path/
