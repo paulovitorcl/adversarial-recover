@@ -2,8 +2,7 @@
 
 ## Realizando o download do dataset
 ```
-pip install darwin-py
-darwin dataset pull v7-labs/covid-19-chest-x-ray-dataset:all-images
+https://data.mendeley.com/datasets/rscbjbr9sj/2
 ```
 
 ## Execução
@@ -18,17 +17,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3 - Baixando o dataset
-```
-darwin dataset pull v7-labs/covid-19-chest-x-ray-dataset:all-images
-```
-
-Ou apenas as de COVID-19:
-```
-darwin dataset pull v7-labs/covid-19-chest-x-ray-dataset:covid-only
-```
-
-### 4 - Executando 
+### 3 - Executando 
 Deve-se garantir que o dataset esteja no diretório indicado no script main.py
 ```
 python main.py
