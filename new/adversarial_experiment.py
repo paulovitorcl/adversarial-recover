@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import os
+import json
 import logging
 import torch
 import torchvision.transforms as transforms
@@ -8,35 +9,48 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from torch.utils.data import DataLoader, Dataset
 from genetic_compression import run_ga
 from attacks import fgsm_attack
-from torch.utils.data import DataLoader, random_split
 
 # Configuração de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Carregar dataset e modelo pré-treinado
-def load_data(batch_size=32):
+# Dataset personalizado para carregar imagens
+class CustomDataset(Dataset):
+    def __init__(self, root_dir, transform=None):
+        self.root_dir = root_dir
+        self.transform = transform
+        self.image_files = [f for f in os.listdir(root_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
+
+    def __len__(self):
+        return len(self.image_files)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.root_dir, self.image_files[idx])
+        image = cv2.imread(img_path)
+        label = int(self.image_files[idx].split("_")[0])  # Assumindo nome formato 'label_nome.jpg'
+        
+        if self.transform:
+            image = self.transform(image)
+        
+        return image, label
+
+# Carregar dataset
+def load_data(data_path, batch_size=32):
     transform = transforms.Compose([
-        transforms.Resize((32, 32)),  # Redimensiona para 32x32 pixels
-        transforms.ToTensor(),        # Converte para tensor
-        transforms.Normalize((0.5,), (0.5,))  # Normaliza para [-1, 1]
+        transforms.ToPILImage(),
+        transforms.Resize((32, 32)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
     ])
     
-    # Baixa o dataset CIFAR-10 (pode ser substituído pelo seu)
-    dataset = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=transform)
+    dataset = CustomDataset(data_path, transform=transform)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     
-    # Divide entre treino (80%) e teste (20%)
-    train_size = int(0.8 * len(dataset))
-    test_size = len(dataset) - train_size
-    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+    return dataloader
 
-    # Criar os DataLoaders
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-    return train_loader, test_loader
-
+# Definir modelo CNN
 def load_model():
     model = nn.Sequential(
         nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
@@ -46,79 +60,66 @@ def load_model():
         nn.ReLU(),
         nn.MaxPool2d(kernel_size=2, stride=2),
         nn.Flatten(),
-        nn.Linear(128*8*8, 256),  # Ajustado para saída correta
+        nn.Linear(128*8*8, 256),
         nn.ReLU(),
-        nn.Linear(256, 10),  # 10 classes para CIFAR-10
-        nn.Softmax(dim=1)
+        nn.Linear(256, 10)  # Sem Softmax para compatibilidade com CrossEntropyLoss
     )
     return model
 
-# Aplicar ataque adversarial
-def apply_attack(model, images, labels, epsilon=0.03):
-    model.eval()
-    images_adv = fgsm_attack(model, images, labels, epsilon)
-    return images_adv
-
-# Recuperar imagens usando melhor compressão
-def recover_images(images_adv, images_original):
-    best_config = run_ga(images_original, images_adv)
-    recovered_images = []
-    for img in images_adv:
-        recovered_img = apply_compression(img, best_config)
-        recovered_images.append(recovered_img)
-    return recovered_images
-
-# Aplicar compressão conforme configuração
-def apply_compression(image, config):
-    formato, qualidade, rotacao, brilho, contraste = config
-    image = cv2.rotate(image, rotacao)
-    image = cv2.convertScaleAbs(image, alpha=contraste, beta=brilho*50)
-    temp_path = f"temp.{formato}"
-    cv2.imwrite(temp_path, image, [cv2.IMWRITE_JPEG_QUALITY, qualidade])
-    image = cv2.imread(temp_path)
-    os.remove(temp_path)
-    return image
-
 # Avaliação do classificador
-def evaluate_model(model, images, labels):
+def evaluate_model(model, dataloader):
     model.eval()
+    all_preds, all_labels = [], []
     with torch.no_grad():
-        outputs = model(images)
-        _, preds = torch.max(outputs, 1)
-    return preds
+        for images, labels in dataloader:
+            outputs = model(images)
+            _, preds = torch.max(outputs, 1)
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+    
+    return np.array(all_preds), np.array(all_labels)
 
 # Pipeline principal
 def main():
-    train_loader, test_loader = load_data()
+    data_path = "./dataset"  # Caminho do dataset do Mendeley
+    dataloader = load_data(data_path)
     model = load_model()
-    
+
     # Avaliação inicial
-    preds_before = evaluate_model(model, images, labels)
-    
+    logging.info("Avaliando modelo antes do ataque...")
+    preds_before, labels = evaluate_model(model, dataloader)
+
     # Aplicação de ataque adversarial
-    images_adv = apply_attack(model, images, labels)
-    preds_after_attack = evaluate_model(model, images_adv, labels)
+    logging.info("Aplicando ataque adversarial...")
+    images_adv = [fgsm_attack(model, img, lbl, epsilon=0.03) for img, lbl in dataloader]
+
+    # Otimização com Algoritmo Genético
+    logging.info("Otimizando compressão com Algoritmo Genético...")
+    best_config = run_ga(images_adv, labels)
     
+    # Salvar melhor configuração
+    with open("best_compression.json", "w") as f:
+        json.dump(best_config, f)
+
+    logging.info(f"Melhor configuração encontrada: {best_config}")
+
     # Recuperação das imagens
-    images_recovered = recover_images(images_adv, images)
-    preds_after_recovery = evaluate_model(model, images_recovered, labels)
-    
+    images_recovered = [apply_compression(img, best_config) for img in images_adv]
+
+    # Avaliação após recuperação
+    logging.info("Avaliando modelo após recuperação...")
+    preds_after_recovery, _ = evaluate_model(model, images_recovered)
+
     # Matriz de confusão
     cm_before = confusion_matrix(labels, preds_before)
-    cm_after = confusion_matrix(labels, preds_after_attack)
-    cm_recovered = confusion_matrix(labels, preds_after_recovery)
+    cm_after = confusion_matrix(labels, preds_after_recovery)
     
-    # Exibir resultados
-    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
     ConfusionMatrixDisplay(cm_before).plot(ax=ax[0], cmap='Blues')
-    ConfusionMatrixDisplay(cm_after).plot(ax=ax[1], cmap='Reds')
-    ConfusionMatrixDisplay(cm_recovered).plot(ax=ax[2], cmap='Greens')
+    ConfusionMatrixDisplay(cm_after).plot(ax=ax[1], cmap='Greens')
     ax[0].set_title("Antes do Ataque")
-    ax[1].set_title("Após o Ataque")
-    ax[2].set_title("Após a Recuperação")
+    ax[1].set_title("Após a Recuperação")
     plt.show()
-    
-    logging.info("Experimento concluído.")
 
 if __name__ == "__main__":
     main()
