@@ -52,10 +52,16 @@ class XRayDataset(Dataset):
         image = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)  # Lendo em escala de cinza
         label = self.labels[idx]
 
+        # ✅ Verificação se a imagem foi carregada corretamente
+        if image is None:
+            logging.warning(f"Imagem não carregada: {img_path}. Pulando este arquivo.")
+            return self.__getitem__((idx + 1) % len(self.image_files))  # Pular para a próxima imagem
+
         if self.transform:
             image = self.transform(image)
 
         return image, label
+
 
 # Carregar dataset
 def load_data(data_path, batch_size=32):
