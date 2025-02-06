@@ -5,3 +5,6 @@ torch
 torchvision
 pandas
 scipy
+matplotlib
+deap
+scikit-image
