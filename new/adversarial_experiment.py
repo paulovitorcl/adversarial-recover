@@ -90,17 +90,17 @@ def load_model():
 # Avaliação do classificador
 def evaluate_model(model, dataloader):
     model.eval()
-    all_preds, all_labels = []
+    all_preds = []   # ✅ Corrigido: Inicializar listas separadas
+    all_labels = []
     
     with torch.no_grad():
         for images, labels in dataloader:
-            # ✅ Corrigindo a dimensão: Remove dimensões desnecessárias
+            # ✅ Corrigir dimensões das imagens
             if images.ndim == 5:
                 images = images.squeeze(1)  # Remove a dimensão extra
 
-            # ✅ Garantir que o formato está correto [batch_size, 1, 128, 128]
             if images.ndim == 3:
-                images = images.unsqueeze(1)  # Adiciona o canal para imagens em escala de cinza
+                images = images.unsqueeze(1)  # Garante o formato [batch_size, 1, 128, 128]
 
             outputs = model(images)
             _, preds = torch.max(outputs, 1)
@@ -109,6 +109,7 @@ def evaluate_model(model, dataloader):
             all_labels.extend(labels.cpu().numpy())
 
     return np.array(all_preds), np.array(all_labels)
+
 
 
 # Aplicação de compressão otimizada pelo GA
